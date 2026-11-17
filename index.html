@@ -31,7 +31,7 @@
       var(--bg);
     color: var(--text);
     font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
-    padding: 36px 20px 56px;
+    padding: 34px 20px 56px;
   }
 
   .app { max-width: 1180px; margin: 0 auto; }
@@ -39,7 +39,7 @@
   header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 
   header h1 { font-size: 25px; line-height: 1.2; letter-spacing: 0.2px; margin: 0 0 6px; }
-  header p { margin: 0; color: var(--muted); max-width: 660px; }
+  header p { margin: 0; color: var(--muted); max-width: 700px; }
 
   .target-chip {
     display: inline-flex;
@@ -58,7 +58,7 @@
 
   .workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 332px;
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: 18px;
     margin-top: 22px;
     align-items: start;
@@ -66,7 +66,7 @@
 
   .stage {
     position: relative;
-    height: clamp(380px, 68vh, 720px);
+    height: clamp(400px, 70vh, 760px);
     border: 1px solid var(--stroke);
     border-radius: 16px;
     overflow: hidden;
@@ -74,6 +74,7 @@
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
+    cursor: default;
   }
 
   .stage.has-image { cursor: grab; }
@@ -151,7 +152,7 @@
   .preview-frame {
     margin-top: 10px;
     width: 100%;
-    max-width: 260px;
+    max-width: 240px;
     aspect-ratio: 1;
     border-radius: 12px;
     overflow: hidden;
@@ -166,6 +167,8 @@
 
   #preview { display: block; width: 100%; height: 100%; }
 
+  .preview-info { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+
   .file-name {
     font-size: 14px;
     font-weight: 600;
@@ -176,7 +179,7 @@
 
   .meta { margin-top: 3px; color: var(--muted); font-size: 12.5px; }
 
-  .stat-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .stat-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
 
   .badge {
     font-size: 11px;
@@ -189,8 +192,6 @@
 
   .badge.lossless { color: var(--green); background: rgba(142, 240, 192, 0.1); }
   .badge.scaled { color: var(--amber); background: rgba(255, 212, 121, 0.12); }
-
-  .muted { color: var(--muted); font-size: 13px; }
 
   .controls { display: flex; flex-direction: column; gap: 16px; }
 
@@ -234,6 +235,31 @@
 
   .segmented button small { font-size: 10px; font-weight: 500; opacity: 0.65; letter-spacing: 0.04em; }
   .segmented button.active { background: rgba(122, 162, 255, 0.16); color: #cfe0ff; }
+
+  .ratio-row { display: flex; align-items: center; gap: 8px; }
+
+  .ratio-row input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--stroke);
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.22);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    padding: 8px 10px;
+  }
+
+  .ratio-row input:focus { outline: 2px solid rgba(122, 162, 255, 0.55); outline-offset: 1px; }
+  .ratio-row input:disabled { opacity: 0.35; }
+  .ratio-row .unit { color: var(--muted); font-size: 13px; }
+
+  .hint-line { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+  .rotate-row { display: flex; gap: 6px; }
+
+  .rotate-row .btn { flex: 1; padding: 7px 6px; font-size: 12px; }
 
   .actions { display: flex; flex-direction: column; gap: 8px; }
 
@@ -313,14 +339,13 @@
 
   @media (max-width: 900px) {
     .workspace { grid-template-columns: minmax(0, 1fr); }
-    .stage { height: 58vh; min-height: 340px; }
-    .preview-frame { max-width: 220px; }
+    .stage { height: 56vh; min-height: 340px; }
     header { align-items: flex-start; }
   }
 
   @media (max-width: 560px) {
     body { padding: 24px 14px 40px; }
-    .stage { height: 48vh; min-height: 300px; }
+    .stage { height: 46vh; min-height: 300px; }
     .stage-tip { font-size: 11px; }
     .sub-actions { flex-wrap: wrap; }
   }
@@ -331,7 +356,7 @@
   <header>
     <div>
       <h1>锁屏图片裁剪</h1>
-      <p>拖动图片选择取景范围，滚轮或滑杆缩放，右侧实时预览最终效果，确认后再下载。</p>
+      <p>拖动图片定位，拖动取景框边框缩放，滚轮或滑杆调整倍率，右侧实时预览最终效果。</p>
     </div>
     <div class="target-chip"><span id="targetLabel">240 × 240</span><small>PNG / JPG</small></div>
   </header>
@@ -349,7 +374,7 @@
         <strong>拖入图片，或点击选择</strong>
         <span class="muted">PNG / JPG / WebP，图片不上传</span>
       </div>
-      <div class="stage-tip" id="stageTip" hidden>拖动定位 · 滚轮缩放 · 双击复位</div>
+      <div class="stage-tip" id="stageTip" hidden>拖动定位 · 边框缩放 · 双击复位</div>
     </div>
 
     <aside class="sidebar">
@@ -358,13 +383,12 @@
         <div class="preview-frame" id="previewFrame">
           <canvas id="preview"></canvas>
         </div>
-      </section>
-
-      <section class="panel">
-        <div class="file-name" id="fileName">未选择图片</div>
-        <div class="meta" id="fileMeta">拖入一张图片开始</div>
-        <div class="stat-row" id="statRow" hidden>
-          <span class="badge" id="scaleBadge"></span>
+        <div class="preview-info">
+          <div class="file-name" id="fileName">未选择图片</div>
+          <div class="meta" id="fileMeta">拖入一张图片开始</div>
+          <div class="stat-row" id="statRow" hidden>
+            <span class="badge" id="scaleBadge"></span>
+          </div>
         </div>
       </section>
 
@@ -375,6 +399,25 @@
             <span class="value" id="zoomValue">—</span>
           </div>
           <input id="zoom" type="range" min="0" max="1000" step="1" value="0" disabled aria-label="缩放取景范围" />
+          <div class="ratio-row">
+            <input id="ratioInput" type="number" min="0.1" step="1" list="ratioList" value="" disabled aria-label="取样倍率，源像素除以输出像素" />
+            <span class="unit">×</span>
+          </div>
+          <div class="hint-line">取样倍率 = 源像素 ÷ 输出像素；整数倍率（如 4.00×）缩放质量更好。</div>
+          <datalist id="ratioList"></datalist>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <span class="label">旋转</span>
+            <span class="value" id="angleValue">0.0°</span>
+          </div>
+          <div class="rotate-row">
+            <button type="button" class="btn" id="rotateLeft" disabled title="逆时针 90°">↺ 90°</button>
+            <button type="button" class="btn" id="rotateRight" disabled title="顺时针 90°">↻ 90°</button>
+            <button type="button" class="btn ghost" id="rotateReset" disabled title="恢复 0°">0°</button>
+          </div>
+          <input id="angle" type="range" min="-45" max="45" step="0.1" value="0" disabled aria-label="微调旋转角度" />
         </div>
 
         <div class="field">
@@ -415,11 +458,13 @@
 
   /* ---------- 配置 ---------- */
 
-  // 内置尺寸预设，后续可在此追加；支持非正方形（预览框会随比例变化）
   const SIZE_PRESETS = [
     { id: '240', width: 240, height: 240, label: '240 × 240' },
   ];
   const TARGET = SIZE_PRESETS[0];
+
+  const FRAME_SCALE_MIN = 0.3;
+  const FRAME_SCALE_MAX = 1.2;
 
   /* ---------- 状态 ---------- */
 
@@ -428,12 +473,14 @@
     file: null,
     format: 'png',
     quality: 0.95,
-    // k = 一个输出像素对应多少源图像素；1 表示 1:1 无损
     k: 1,
     kMin: 1,
     kMax: 1,
-    cx: 0,
-    cy: 0,
+    cu: 0,
+    cv: 0,
+    quarter: 0,
+    fine: 0,
+    frameScale: 1,
   };
 
   /* ---------- DOM ---------- */
@@ -444,7 +491,6 @@
   const stageTip = $('#stageTip');
   const editor = $('#editor');
   const preview = $('#preview');
-  const previewFrame = $('#previewFrame');
   const previewLabel = $('#previewLabel');
   const targetLabel = $('#targetLabel');
   const fileName = $('#fileName');
@@ -453,6 +499,13 @@
   const scaleBadge = $('#scaleBadge');
   const zoom = $('#zoom');
   const zoomValue = $('#zoomValue');
+  const ratioInput = $('#ratioInput');
+  const ratioList = $('#ratioList');
+  const angleSlider = $('#angle');
+  const angleValue = $('#angleValue');
+  const rotateLeft = $('#rotateLeft');
+  const rotateRight = $('#rotateRight');
+  const rotateReset = $('#rotateReset');
   const formatGroup = $('#formatGroup');
   const qualityField = $('#qualityField');
   const quality = $('#quality');
@@ -463,6 +516,7 @@
   const changeBtn = $('#changeBtn');
   const exportHint = $('#exportHint');
   const fileInput = $('#fileInput');
+  const previewFrame = $('#previewFrame');
 
   const ectx = editor.getContext('2d');
   const pctx = preview.getContext('2d');
@@ -474,7 +528,7 @@
   preview.height = TARGET.height;
   previewFrame.style.aspectRatio = TARGET.width + ' / ' + TARGET.height;
 
-  /* ---------- 工具函数 ---------- */
+  /* ---------- 工具 ---------- */
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -521,9 +575,24 @@
     }
   }
 
-  const cropSize = () => ({ w: TARGET.width * state.k, h: TARGET.height * state.k });
+  const angleRad = () => ((state.quarter * 90 + state.fine) * Math.PI) / 180;
+  const angleDeg = () => state.quarter * 90 + state.fine;
 
-  /* ---------- 画布尺寸 ---------- */
+  function normalizedAngle(deg) {
+    const a = ((deg + 180) % 360 + 360) % 360 - 180;
+    return a === -180 ? 180 : a;
+  }
+
+  function isRightAngle() {
+    const a = angleDeg();
+    const r = ((a % 90) + 90) % 90;
+    return r < 1e-6 || 90 - r < 1e-6;
+  }
+
+  const cropWidth = () => TARGET.width * state.k;
+  const cropHeight = () => TARGET.height * state.k;
+
+  /* ---------- 画布与布局 ---------- */
 
   let viewW = 0;
   let viewH = 0;
@@ -555,12 +624,16 @@
     scheduleRender();
   }
 
+  const baseFrameSize = () => Math.min(viewW, viewH) * 0.76;
+
   function frameRect() {
     const aspect = TARGET.width / TARGET.height;
-    const fw = Math.min(viewW * 0.76, viewH * 0.76 * aspect);
+    const fw = Math.min(baseFrameSize() * state.frameScale, viewW * 0.94, viewH * 0.94 * aspect);
     const fh = fw / aspect;
     return { fx: (viewW - fw) / 2, fy: (viewH - fh) / 2, fw, fh };
   }
+
+  const displayFactor = () => frameRect().fw / (TARGET.width * state.k);
 
   function scheduleRender() {
     if (raf) return;
@@ -569,6 +642,17 @@
       draw();
       drawPreview();
     });
+  }
+
+  // 图片中心相对取景中心的偏移（源图像素）
+  function imageOffset() {
+    const a = angleRad();
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    return {
+      x: -(state.cu * c - state.cv * s),
+      y: -(state.cu * s + state.cv * c),
+    };
   }
 
   function draw() {
@@ -584,7 +668,6 @@
     const frame = frameRect();
     layout = frame;
 
-    // 取景框内先铺透明棋盘，方便看 PNG 透明区域
     ectx.save();
     ectx.beginPath();
     ectx.rect(frame.fx, frame.fy, frame.fw, frame.fh);
@@ -593,23 +676,25 @@
     ectx.fillRect(frame.fx, frame.fy, frame.fw, frame.fh);
     ectx.restore();
 
-    const { image } = state;
-    if (image) {
-      const factor = frame.fw / (TARGET.width * state.k);
-      const size = cropSize();
-      const sx = state.cx - size.w / 2;
-      const sy = state.cy - size.h / 2;
-      const imgX = frame.fx - sx * factor;
-      const imgY = frame.fy - sy * factor;
+    const factor = frame.fw / (TARGET.width * state.k);
+    const offset = imageOffset();
+    const cx = frame.fx + frame.fw / 2 + offset.x * factor;
+    const cy = frame.fy + frame.fh / 2 + offset.y * factor;
 
-      ectx.save();
-      ectx.imageSmoothingEnabled = true;
-      ectx.imageSmoothingQuality = 'high';
-      ectx.drawImage(image, imgX, imgY, image.width * factor, image.height * factor);
-      ectx.restore();
-    }
+    ectx.save();
+    ectx.imageSmoothingEnabled = true;
+    ectx.imageSmoothingQuality = 'high';
+    ectx.translate(cx, cy);
+    ectx.rotate(angleRad());
+    ectx.drawImage(
+      state.image,
+      (-state.image.width * factor) / 2,
+      (-state.image.height * factor) / 2,
+      state.image.width * factor,
+      state.image.height * factor
+    );
+    ectx.restore();
 
-    // 框外压暗
     ectx.save();
     ectx.beginPath();
     ectx.rect(0, 0, viewW, viewH);
@@ -618,7 +703,6 @@
     ectx.fill('evenodd');
     ectx.restore();
 
-    // 三分线
     ectx.save();
     ectx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
     ectx.lineWidth = 1;
@@ -634,30 +718,34 @@
     }
     ectx.restore();
 
-    // 边框与四角
     ectx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
     ectx.lineWidth = 1.25;
     ectx.strokeRect(frame.fx + 0.5, frame.fy + 0.5, frame.fw - 1, frame.fh - 1);
 
-    const L = Math.min(22, frame.fw * 0.14);
+    drawHandles(frame);
+  }
+
+  function drawHandles(frame) {
+    const corner = 10;
+    const edge = 16;
+    const points = [
+      [frame.fx, frame.fy],
+      [frame.fx + frame.fw, frame.fy],
+      [frame.fx, frame.fy + frame.fh],
+      [frame.fx + frame.fw, frame.fy + frame.fh],
+    ];
+
     ectx.save();
-    ectx.strokeStyle = '#ffffff';
-    ectx.lineWidth = 2;
-    ectx.lineCap = 'round';
-    ectx.beginPath();
-    ectx.moveTo(frame.fx, frame.fy + L);
-    ectx.lineTo(frame.fx, frame.fy);
-    ectx.lineTo(frame.fx + L, frame.fy);
-    ectx.moveTo(frame.fx + frame.fw - L, frame.fy);
-    ectx.lineTo(frame.fx + frame.fw, frame.fy);
-    ectx.lineTo(frame.fx + frame.fw, frame.fy + L);
-    ectx.moveTo(frame.fx + frame.fw, frame.fy + frame.fh - L);
-    ectx.lineTo(frame.fx + frame.fw, frame.fy + frame.fh);
-    ectx.lineTo(frame.fx + frame.fw - L, frame.fy + frame.fh);
-    ectx.moveTo(frame.fx + L, frame.fy + frame.fh);
-    ectx.lineTo(frame.fx, frame.fy + frame.fh);
-    ectx.lineTo(frame.fx, frame.fy + frame.fh - L);
-    ectx.stroke();
+    ectx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ectx.shadowBlur = 5;
+    ectx.fillStyle = '#ffffff';
+    for (const [x, y] of points) {
+      ectx.fillRect(x - corner / 2, y - corner / 2, corner, corner);
+    }
+    ectx.fillRect(frame.fx + frame.fw / 2 - edge / 2, frame.fy - 2, edge, 4);
+    ectx.fillRect(frame.fx + frame.fw / 2 - edge / 2, frame.fy + frame.fh - 2, edge, 4);
+    ectx.fillRect(frame.fx - 2, frame.fy + frame.fh / 2 - edge / 2, 4, edge);
+    ectx.fillRect(frame.fx + frame.fw - 2, frame.fy + frame.fh / 2 - edge / 2, 4, edge);
     ectx.restore();
   }
 
@@ -672,30 +760,54 @@
 
     if (!state.image) return;
 
-    const size = cropSize();
-    pctx.imageSmoothingEnabled = Math.abs(state.k - 1) > 1e-6;
+    const scale = 1 / state.k;
+    const offset = imageOffset();
+    const cx = TARGET.width / 2 + offset.x * scale;
+    const cy = TARGET.height / 2 + offset.y * scale;
+    const exact = Math.abs(state.k - 1) < 1e-9 && isRightAngle();
+
+    pctx.imageSmoothingEnabled = !exact;
     pctx.imageSmoothingQuality = 'high';
+    pctx.save();
+    pctx.translate(cx, cy);
+    pctx.rotate(angleRad());
     pctx.drawImage(
       state.image,
-      state.cx - size.w / 2,
-      state.cy - size.h / 2,
-      size.w,
-      size.h,
-      0,
-      0,
-      TARGET.width,
-      TARGET.height
+      (-state.image.width * scale) / 2,
+      (-state.image.height * scale) / 2,
+      state.image.width * scale,
+      state.image.height * scale
     );
+    pctx.restore();
   }
 
   /* ---------- 视图 ---------- */
 
+  function computeLimits() {
+    if (!state.image) return;
+    const a = angleRad();
+    const c = Math.abs(Math.cos(a));
+    const s = Math.abs(Math.sin(a));
+    const k1 = state.image.width / (TARGET.width * c + TARGET.height * s);
+    const k2 = state.image.height / (TARGET.width * s + TARGET.height * c);
+    state.kMax = Math.max(1e-6, Math.min(k1, k2));
+    state.kMin = Math.min(1, state.kMax);
+    state.k = clamp(state.k, state.kMin, state.kMax);
+  }
+
   function clampCenter() {
     if (!state.image) return;
-    const size = cropSize();
-    const { width: sw, height: sh } = state.image;
-    state.cx = clamp(state.cx, size.w / 2, sw - size.w / 2);
-    state.cy = clamp(state.cy, size.h / 2, sh - size.h / 2);
+    const a = angleRad();
+    const c = Math.abs(Math.cos(a));
+    const s = Math.abs(Math.sin(a));
+    const aw = cropWidth() / 2;
+    const ah = cropHeight() / 2;
+    const du = aw * c + ah * s;
+    const dv = aw * s + ah * c;
+    const lu = Math.max(0, state.image.width / 2 - du);
+    const lv = Math.max(0, state.image.height / 2 - dv);
+    state.cu = clamp(state.cu, -lu, lu);
+    state.cv = clamp(state.cv, -lv, lv);
   }
 
   function zoomToSlider(k) {
@@ -710,21 +822,62 @@
     return state.kMax * Math.pow(state.kMin / state.kMax, t);
   }
 
+  let ratioSignature = '';
+
+  function refreshRatioList() {
+    if (!state.image) return;
+    const signature = state.kMax.toFixed(6);
+    if (signature === ratioSignature) return;
+    ratioSignature = signature;
+
+    ratioList.innerHTML = '';
+    const maxInt = Math.floor(state.kMax + 1e-9);
+
+    if (Math.abs(state.kMax - maxInt) > 1e-9) {
+      const fit = document.createElement('option');
+      fit.value = state.kMax.toFixed(3);
+      fit.label = '适应整图 · ' + state.kMax.toFixed(2) + '×';
+      ratioList.appendChild(fit);
+    }
+
+    for (let i = maxInt; i >= 1; i -= 1) {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.label = i.toFixed(2) + '× · 取景 ' + Math.round(TARGET.width * i) + ' px';
+      ratioList.appendChild(opt);
+    }
+  }
+
   function updateUI() {
     if (!state.image) {
       zoomValue.textContent = '—';
+      angleValue.textContent = '0.0°';
       return;
     }
-    const size = cropSize();
-    const cw = Math.round(size.w);
-    const ch = Math.round(size.h);
-    const ratio = state.k;
 
+    const cw = Math.round(cropWidth());
+    const ch = Math.round(cropHeight());
     zoomValue.textContent = cw + ' × ' + ch + ' px';
+    zoom.value = String(zoomToSlider(state.k));
+    zoom.disabled = state.kMax - state.kMin < 1e-9;
+    oneToOneBtn.disabled = state.kMax < 1;
+    angleValue.textContent = normalizedAngle(angleDeg()).toFixed(1) + '°';
 
+    if (document.activeElement !== ratioInput) {
+      ratioInput.value = state.k.toFixed(2);
+    }
+    ratioInput.min = String(state.kMin);
+    ratioInput.max = String(state.kMax);
+
+    const ratio = state.k;
     if (Math.abs(ratio - 1) < 1e-3) {
-      scaleBadge.textContent = '1:1 无损';
-      scaleBadge.className = 'badge lossless';
+      if (isRightAngle()) {
+        scaleBadge.textContent = '1:1 无损';
+        scaleBadge.className = 'badge lossless';
+      } else {
+        scaleBadge.textContent = '1:1 · 旋转 ' + normalizedAngle(angleDeg()).toFixed(1) + '°';
+        scaleBadge.className = 'badge scaled';
+      }
     } else if (ratio > 1) {
       scaleBadge.textContent = '缩小 ' + ratio.toFixed(2) + '×';
       scaleBadge.className = 'badge scaled';
@@ -733,7 +886,7 @@
       scaleBadge.className = 'badge scaled';
     }
 
-    zoom.value = String(zoomToSlider(state.k));
+    refreshRatioList();
   }
 
   function setZoom(next) {
@@ -744,15 +897,21 @@
     scheduleRender();
   }
 
+  function applyAngle() {
+    if (!state.image) return;
+    computeLimits();
+    clampCenter();
+    updateUI();
+    scheduleRender();
+  }
+
   function resetView() {
     if (!state.image) return;
-    const { width: sw, height: sh } = state.image;
-    const kMax = Math.min(sw / TARGET.width, sh / TARGET.height);
-    state.kMax = kMax;
-    state.kMin = Math.min(1, kMax);
-    state.k = kMax;
-    state.cx = sw / 2;
-    state.cy = sh / 2;
+    state.frameScale = 1;
+    computeLimits();
+    state.k = state.kMax;
+    state.cu = 0;
+    state.cv = 0;
     clampCenter();
     updateUI();
     scheduleRender();
@@ -773,19 +932,37 @@
     if (state.image && typeof state.image.close === 'function') state.image.close();
     state.image = bitmap;
     state.file = file;
+    state.quarter = 0;
+    state.fine = 0;
+    state.frameScale = 1;
+    angleSlider.value = '0';
 
-    resetView();
+    computeLimits();
+    state.k = state.kMax;
+    state.cu = 0;
+    state.cv = 0;
+    clampCenter();
+
     stageEmpty.hidden = true;
     stage.classList.add('has-image');
+    stage.style.cursor = 'grab';
     stageTip.hidden = false;
     fileName.textContent = file.name;
     fileMeta.textContent = bitmap.width + ' × ' + bitmap.height + ' px';
     statRow.hidden = false;
     zoom.disabled = state.kMax - state.kMin < 1e-9;
-    oneToOneBtn.disabled = state.kMax < 1;
+    ratioInput.disabled = false;
+    angleSlider.disabled = false;
+    rotateLeft.disabled = false;
+    rotateRight.disabled = false;
+    rotateReset.disabled = false;
     resetBtn.disabled = false;
     downloadBtn.disabled = false;
     exportHint.textContent = '';
+    ratioSignature = '';
+
+    updateUI();
+    scheduleRender();
     return true;
   }
 
@@ -812,20 +989,25 @@
       ctx.fillRect(0, 0, TARGET.width, TARGET.height);
     }
 
-    const size = cropSize();
-    ctx.imageSmoothingEnabled = Math.abs(state.k - 1) > 1e-6;
+    const scale = 1 / state.k;
+    const offset = imageOffset();
+    const cx = TARGET.width / 2 + offset.x * scale;
+    const cy = TARGET.height / 2 + offset.y * scale;
+    const exact = Math.abs(state.k - 1) < 1e-9 && isRightAngle();
+
+    ctx.imageSmoothingEnabled = !exact;
     ctx.imageSmoothingQuality = 'high';
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angleRad());
     ctx.drawImage(
       state.image,
-      state.cx - size.w / 2,
-      state.cy - size.h / 2,
-      size.w,
-      size.h,
-      0,
-      0,
-      TARGET.width,
-      TARGET.height
+      (-state.image.width * scale) / 2,
+      (-state.image.height * scale) / 2,
+      state.image.width * scale,
+      state.image.height * scale
     );
+    ctx.restore();
 
     return new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -858,37 +1040,128 @@
     }
   }
 
-  /* ---------- 交互 ---------- */
+  /* ---------- 指针 ---------- */
 
-  let dragState = null;
+  let panState = null;
+  let resizeState = null;
+
+  function localPoint(event) {
+    const rect = stage.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function hitFrame(x, y) {
+    if (!state.image || !layout.fw) return null;
+    const t = 12;
+    const f = layout;
+    if (x < f.fx - t || x > f.fx + f.fw + t || y < f.fy - t || y > f.fy + f.fh + t) return null;
+    const left = Math.abs(x - f.fx) <= t;
+    const right = Math.abs(x - (f.fx + f.fw)) <= t;
+    const top = Math.abs(y - f.fy) <= t;
+    const bottom = Math.abs(y - (f.fy + f.fh)) <= t;
+    if (!left && !right && !top && !bottom) return null;
+    return { left, right, top, bottom, horizontal: left || right, vertical: top || bottom };
+  }
+
+  function cursorFor(hit) {
+    if (!hit) return 'grab';
+    if (hit.horizontal && hit.vertical) {
+      return (hit.left && hit.top) || (hit.right && hit.bottom) ? 'nwse-resize' : 'nesw-resize';
+    }
+    return hit.horizontal ? 'ew-resize' : 'ns-resize';
+  }
 
   stage.addEventListener('pointerdown', (event) => {
     if (!state.image || event.button !== 0) return;
-    dragState = { x: event.clientX, y: event.clientY, cx: state.cx, cy: state.cy };
-    stage.classList.add('dragging');
+    const point = localPoint(event);
+    const hit = hitFrame(point.x, point.y);
+
+    if (hit) {
+      resizeState = {
+        hit,
+        factor: displayFactor(),
+        centerX: layout.fx + layout.fw / 2,
+        centerY: layout.fy + layout.fh / 2,
+        aspect: TARGET.width / TARGET.height,
+      };
+      stage.style.cursor = cursorFor(hit);
+    } else {
+      panState = { x: event.clientX, y: event.clientY, cu: state.cu, cv: state.cv };
+      stage.style.cursor = 'grabbing';
+      stage.classList.add('dragging');
+    }
+
     try {
       stage.setPointerCapture(event.pointerId);
     } catch (_) { /* 忽略不支持的指针 */ }
   });
 
   stage.addEventListener('pointermove', (event) => {
-    if (!dragState) return;
-    const factor = layout.fw / (TARGET.width * state.k);
-    if (!factor) return;
-    state.cx = dragState.cx - (event.clientX - dragState.x) / factor;
-    state.cy = dragState.cy - (event.clientY - dragState.y) / factor;
-    clampCenter();
-    updateUI();
-    scheduleRender();
+    if (!state.image) return;
+
+    if (resizeState) {
+      const point = localPoint(event);
+      const dx = Math.abs(point.x - resizeState.centerX);
+      const dy = Math.abs(point.y - resizeState.centerY);
+      let f;
+      if (resizeState.hit.horizontal && resizeState.hit.vertical) {
+        f = 2 * Math.max(dx, dy * resizeState.aspect);
+      } else if (resizeState.hit.horizontal) {
+        f = 2 * dx;
+      } else {
+        f = 2 * dy * resizeState.aspect;
+      }
+
+      const base = baseFrameSize();
+      const minF = Math.max(base * FRAME_SCALE_MIN, TARGET.width * state.kMin * resizeState.factor);
+      const maxF = Math.min(
+        Math.min(viewW, viewH) * 0.92,
+        base * FRAME_SCALE_MAX,
+        TARGET.width * state.kMax * resizeState.factor
+      );
+      f = clamp(f, minF, Math.max(minF, maxF));
+
+      state.k = clamp(f / (TARGET.width * resizeState.factor), state.kMin, state.kMax);
+      state.frameScale = (TARGET.width * state.k * resizeState.factor) / base;
+
+      clampCenter();
+      updateUI();
+      scheduleRender();
+      return;
+    }
+
+    if (panState) {
+      const factor = displayFactor();
+      const a = angleRad();
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      const dx = event.clientX - panState.x;
+      const dy = event.clientY - panState.y;
+      state.cu = panState.cu - (dx * c + dy * s) / factor;
+      state.cv = panState.cv - (-dx * s + dy * c) / factor;
+      clampCenter();
+      updateUI();
+      scheduleRender();
+      return;
+    }
+
+    const point = localPoint(event);
+    const hit = hitFrame(point.x, point.y);
+    stage.style.cursor = hit ? cursorFor(hit) : 'grab';
   });
 
-  function endDrag() {
-    dragState = null;
+  function endPointer() {
+    panState = null;
+    resizeState = null;
     stage.classList.remove('dragging');
+    if (state.image) stage.style.cursor = 'grab';
   }
 
-  stage.addEventListener('pointerup', endDrag);
-  stage.addEventListener('pointercancel', endDrag);
+  stage.addEventListener('pointerup', endPointer);
+  stage.addEventListener('pointercancel', endPointer);
+  stage.addEventListener('pointerleave', () => {
+    if (!panState && !resizeState && state.image) stage.style.cursor = 'grab';
+  });
 
   stage.addEventListener('wheel', (event) => {
     if (!state.image) return;
@@ -901,8 +1174,42 @@
     if (state.image) resetView();
   });
 
+  /* ---------- 控件 ---------- */
+
   zoom.addEventListener('input', () => {
     setZoom(sliderToK(Number(zoom.value)));
+  });
+
+  ratioInput.addEventListener('change', () => {
+    const value = Number(ratioInput.value);
+    if (!state.image || !Number.isFinite(value) || value <= 0) {
+      ratioInput.value = state.k.toFixed(2);
+      return;
+    }
+    setZoom(value);
+    ratioInput.value = state.k.toFixed(2);
+  });
+
+  angleSlider.addEventListener('input', () => {
+    state.fine = Number(angleSlider.value);
+    applyAngle();
+  });
+
+  rotateLeft.addEventListener('click', () => {
+    state.quarter -= 1;
+    applyAngle();
+  });
+
+  rotateRight.addEventListener('click', () => {
+    state.quarter += 1;
+    applyAngle();
+  });
+
+  rotateReset.addEventListener('click', () => {
+    state.quarter = 0;
+    state.fine = 0;
+    angleSlider.value = '0';
+    applyAngle();
   });
 
   formatGroup.addEventListener('click', (event) => {
@@ -980,19 +1287,34 @@
     getState: () => ({
       srcW: state.image ? state.image.width : 0,
       srcH: state.image ? state.image.height : 0,
-      cx: state.cx,
-      cy: state.cy,
+      cu: state.cu,
+      cv: state.cv,
       k: state.k,
       kMin: state.kMin,
       kMax: state.kMax,
+      angle: angleDeg(),
+      quarter: state.quarter,
+      fine: state.fine,
+      frameScale: state.frameScale,
       format: state.format,
       quality: state.quality,
     }),
+    getLayout: () => ({ ...layout, factor: layout.fw / (TARGET.width * state.k) }),
     setView: (view = {}) => {
       if (!state.image) return;
+      if (typeof view.angle === 'number') {
+        const q = Math.round(view.angle / 90);
+        state.quarter = q;
+        state.fine = view.angle - q * 90;
+        angleSlider.value = String(state.fine);
+        computeLimits();
+      }
+      if (typeof view.frameScale === 'number') {
+        state.frameScale = clamp(view.frameScale, FRAME_SCALE_MIN, FRAME_SCALE_MAX);
+      }
       if (typeof view.k === 'number') state.k = clamp(view.k, state.kMin, state.kMax);
-      if (typeof view.cx === 'number') state.cx = view.cx;
-      if (typeof view.cy === 'number') state.cy = view.cy;
+      if (typeof view.cu === 'number') state.cu = view.cu;
+      if (typeof view.cv === 'number') state.cv = view.cv;
       clampCenter();
       updateUI();
       scheduleRender();

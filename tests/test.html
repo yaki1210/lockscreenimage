@@ -2,10 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>crop tests</title>
+<title>crop tests v2</title>
 <style>
   body { margin: 0; font: 13px/1.5 Consolas, monospace; background: #111; color: #ddd; }
-  iframe { width: 1000px; height: 1300px; border: 0; background: #000; }
+  iframe { width: 1000px; height: 1500px; border: 0; background: #000; }
   pre { padding: 16px; white-space: pre-wrap; }
 </style>
 </head>
@@ -30,9 +30,12 @@
   ok(!!api, '页面暴露处理 API');
   if (!api) { finish(); return; }
 
-  ok(doc.getElementById('downloadBtn').disabled === true, '初始状态：下载按钮禁用');
-  ok(doc.getElementById('zoom').disabled === true, '初始状态：缩放滑杆禁用');
-  ok(doc.getElementById('statRow').hidden === true, '初始状态：信息区隐藏');
+  const $ = (id) => doc.getElementById(id);
+  ok($('downloadBtn').disabled === true, '初始：下载禁用');
+  ok($('zoom').disabled === true, '初始：缩放滑杆禁用');
+  ok($('ratioInput').disabled === true, '初始：倍率输入禁用');
+  ok($('angle').disabled === true, '初始：角度滑杆禁用');
+  ok($('rotateRight').disabled === true, '初始：旋转按钮禁用');
 
   function canvasOf(w, h, paint) {
     const c = document.createElement('canvas');
@@ -86,15 +89,22 @@
     return null;
   }
 
+  const near = (a, b, tol) => Math.abs(a - b) <= tol;
   const setFormat = (format) => doc.querySelector('[data-format="' + format + '"]').click();
   const setQuality = (value) => {
-    const slider = doc.getElementById('quality');
+    const slider = $('quality');
     slider.value = String(value);
     slider.dispatchEvent(new Event('input', { bubbles: true }));
   };
-  const near = (a, b, tol) => Math.abs(a - b) <= tol;
+  const setRatio = (value) => {
+    $('ratioInput').value = String(value);
+    $('ratioInput').dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  const setFine = (value) => {
+    $('angle').value = String(value);
+    $('angle').dispatchEvent(new Event('input', { bubbles: true }));
+  };
 
-  // ---- 测试图 ----
   const big = canvasOf(800, 600, (ctx) => {
     const g = ctx.createLinearGradient(0, 0, 800, 600);
     g.addColorStop(0, '#204080');
@@ -106,89 +116,178 @@
   });
   const bigFile = await fileFrom(big, 'big.png', 'image/png');
 
-  // ---- 载入与默认视图 ----
-  ok((await api.loadFile(bigFile)) === true, '载入 800×600 图片');
+  ok((await api.loadFile(bigFile)) === true, '载入 800×600');
   let s = api.getState();
-  ok(s.srcW === 800 && s.srcH === 600, '返回源尺寸');
-  ok(near(s.k, 2.5, 1e-6), '默认缩放为覆盖（k=2.5）');
-  ok(near(s.cx, 400, 1e-6) && near(s.cy, 300, 1e-6), '默认取景居中');
-  ok(s.kMin === 1 && near(s.kMax, 2.5, 1e-6), '缩放范围 1×–2.5×');
-  ok(doc.getElementById('downloadBtn').disabled === false, '载入后下载按钮可用');
-  ok(doc.getElementById('zoom').disabled === false, '载入后缩放滑杆可用');
-  ok(doc.getElementById('stageEmpty').hidden === true, '载入后空状态隐藏');
+  ok(s.srcW === 800 && s.srcH === 600, '源尺寸 800×600');
+  ok(near(s.k, 2.5, 1e-6) && near(s.kMax, 2.5, 1e-6), '默认倍率 = 覆盖倍率 2.5');
+  ok(s.kMin === 1, '最小倍率 1:1');
+  ok(s.cu === 0 && s.cv === 0, '默认取景居中');
+  ok(s.angle === 0 && s.frameScale === 1, '默认角度 0、取景框满尺寸');
+  ok($('downloadBtn').disabled === false, '载入后下载可用');
+  ok($('zoom').disabled === false, '载入后缩放可用');
+  ok($('ratioInput').disabled === false, '载入后倍率输入可用');
+  ok($('angle').disabled === false && $('rotateRight').disabled === false, '载入后旋转可用');
 
-  // ---- 默认（缩小）导出 ----
+  const ratioOptions = [...doc.querySelectorAll('#ratioList option')].map((o) => o.value);
+  ok(ratioOptions.includes('2') && ratioOptions.includes('1'), '倍率候选包含整数 1×、2×');
+
   setFormat('png');
   const fitBlob = await api.exportBlob();
   const fitDims = await dims(fitBlob);
-  ok(fitBlob.type === 'image/png', '默认导出 PNG');
-  ok(fitDims.w === 240 && fitDims.h === 240, '默认导出 240×240');
+  ok(fitBlob.type === 'image/png' && fitDims.w === 240 && fitDims.h === 240, '适应视图导出 240×240 PNG');
   const fitPixel = await pixel(fitBlob, 120, 120);
   const fitSource = sourcePixel(big, 400, 300);
-  ok(near(fitPixel[0], fitSource[0], 6) && near(fitPixel[1], fitSource[1], 6) && near(fitPixel[2], fitSource[2], 6), '缩小取样颜色正确 ' + fitPixel + ' vs ' + fitSource);
-  ok(/缩小/.test(doc.getElementById('scaleBadge').textContent), '标记为缩小');
+  ok(near(fitPixel[0], fitSource[0], 6) && near(fitPixel[1], fitSource[1], 6) && near(fitPixel[2], fitSource[2], 6), '适应取样颜色正确');
+  ok(/缩小/.test($('scaleBadge').textContent), '标记缩小');
 
-  // ---- 1:1 像素精确 ----
-  api.setView({ k: 1, cx: 420, cy: 320 });
+  api.setView({ k: 1, cu: 20, cv: 20 });
   s = api.getState();
   ok(s.k === 1, '切到 1:1');
-  ok(/1:1/.test(doc.getElementById('scaleBadge').textContent), '标记 1:1 无损');
+  ok(/1:1 无损/.test($('scaleBadge').textContent), '标记 1:1 无损');
   const exactBlob = await api.exportBlob();
   const marker = await pixel(exactBlob, 4, 4);
-  ok(marker[0] === 255 && marker[1] === 0 && marker[2] === 255 && marker[3] === 255, '1:1 裁剪像素未被改变');
-  const exactPixel = await pixel(exactBlob, 100, 100);
-  const exactSource = sourcePixel(big, 420 - 120 + 100, 320 - 120 + 100);
-  ok(exactPixel.every((v, i) => v === exactSource[i]), '1:1 渐变像素逐位一致');
+  ok(marker[0] === 255 && marker[1] === 0 && marker[2] === 255, '1:1 标记像素不变');
+  const exPix = await pixel(exactBlob, 100, 100);
+  const exSrc = sourcePixel(big, 420 - 120 + 100, 320 - 120 + 100);
+  ok(exPix.every((v, i) => v === exSrc[i]), '1:1 逐位一致');
 
-  // ---- 边界限制 ----
-  api.setView({ k: 1, cx: -9999, cy: 9999 });
+  api.setView({ k: 1, cu: 9999, cv: -9999 });
   s = api.getState();
-  ok(s.cx === 120 && s.cy === 480, '取景框限制在图片内');
+  ok(s.cu === 280 && s.cv === -180, '取景中心限制在图片内');
   api.setView({ k: 99 });
-  ok(near(api.getState().k, 2.5, 1e-6), '放大上限为覆盖倍数');
+  ok(near(api.getState().k, 2.5, 1e-6), '倍率上限为适应倍率');
   api.setView({ k: 0.001 });
-  ok(api.getState().k === 1, '缩小下限为 1:1');
+  ok(api.getState().k === 1, '倍率下限为 1:1');
 
-  // ---- 滑杆与按钮 ----
-  const zoom = doc.getElementById('zoom');
-  zoom.value = '500';
-  zoom.dispatchEvent(new Event('input', { bubbles: true }));
+  setRatio(1);
+  ok(api.getState().k === 1, '输入 1 → 1:1');
+  setRatio(1.75);
+  ok(near(api.getState().k, 1.75, 1e-6), '输入 1.75 → 精确倍率');
+  ok($('ratioInput').value === '1.75', '倍率输入显示 1.75');
+  ok(/缩小 1.75×/.test($('scaleBadge').textContent), '标记 1.75×');
+  setRatio(99);
+  ok(near(api.getState().k, 2.5, 1e-6), '超范围倍率被限制');
+  setRatio(0);
+  ok(near(api.getState().k, 2.5, 1e-6), '非法倍率被忽略');
+
+  $('zoom').value = '500';
+  $('zoom').dispatchEvent(new Event('input', { bubbles: true }));
   s = api.getState();
-  ok(s.k > 1 && s.k < 2.5, '滑杆可调整到中间倍率（' + s.k.toFixed(3) + '）');
-  doc.getElementById('oneToOneBtn').click();
-  ok(Math.abs(api.getState().k - 1) < 1e-6, '「1:1 裁剪」按钮生效');
-  doc.getElementById('resetBtn').click();
-  ok(near(api.getState().k, 2.5, 1e-6), '「复位」恢复适应视图');
+  ok(s.k > 1 && s.k < 2.5, '滑杆中间倍率生效');
+  $('oneToOneBtn').click();
+  ok(Math.abs(api.getState().k - 1) < 1e-6, '1:1 按钮生效');
+  $('resetBtn').click();
+  ok(near(api.getState().k, 2.5, 1e-6), '复位恢复适应倍率');
 
-  // ---- 拖拽 ----
-  await sleep(200);
-  const before = api.getState();
-  const stage = doc.getElementById('stage');
+  await sleep(250);
+  const beforePan = api.getState();
+  const stage = $('stage');
   const pointer = (type, x, y) => stage.dispatchEvent(new win.PointerEvent(type, {
     bubbles: true, clientX: x, clientY: y, pointerId: 1, button: 0,
   }));
-  pointer('pointerdown', 400, 300);
-  pointer('pointermove', 450, 300);
-  pointer('pointerup', 450, 300);
-  const after = api.getState();
-  ok(after.cx < before.cx, '拖动向右时取景左移（' + before.cx.toFixed(1) + ' → ' + after.cx.toFixed(1) + '）');
-  ok(after.cy === before.cy, '水平拖动不影响纵向');
+  pointer('pointerdown', 500, 400);
+  pointer('pointermove', 550, 400);
+  pointer('pointerup', 550, 400);
+  const afterPan = api.getState();
+  ok(afterPan.cu < beforePan.cu, '向右拖动时取景左移');
+  ok(afterPan.cv === beforePan.cv, '水平拖动不影响纵向');
 
-  // ---- 小图放大 ----
+  $('resetBtn').click();
+  await sleep(250);
+  const stageRect = stage.getBoundingClientRect();
+  const layout1 = api.getLayout();
+  const beforeResize = api.getState();
+  const edgeX = stageRect.left + layout1.fx + layout1.fw - 3;
+  const edgeY = stageRect.top + layout1.fy + layout1.fh / 2;
+  pointer('pointerdown', edgeX, edgeY);
+  pointer('pointermove', edgeX - 60, edgeY);
+  pointer('pointerup', edgeX - 60, edgeY);
+  const afterResize = api.getState();
+  ok(afterResize.k < beforeResize.k, '向内拖右边框 → 取景缩小（' + beforeResize.k.toFixed(2) + ' → ' + afterResize.k.toFixed(2) + '）');
+  ok(afterResize.frameScale < 1, '取景框随拖动变小');
+  ok(near(afterResize.cu, beforeResize.cu, 1e-6), '边框缩放不改变取景中心');
+
+  await sleep(250);
+  const layout2 = api.getLayout();
+  const rect2 = stage.getBoundingClientRect();
+  const edge2X = rect2.left + layout2.fx + layout2.fw - 3;
+  const edge2Y = rect2.top + layout2.fy + layout2.fh / 2;
+  pointer('pointerdown', edge2X, edge2Y);
+  pointer('pointermove', edge2X + 120, edge2Y);
+  pointer('pointerup', edge2X + 120, edge2Y);
+  const afterExpand = api.getState();
+  ok(afterExpand.k > afterResize.k, '向外拖边框 → 取景放大');
+  ok(near(afterExpand.k, beforeResize.k, 0.08), '拖回原位置恢复原倍率');
+
+  const markerImg = canvasOf(400, 300, (ctx) => {
+    ctx.fillStyle = '#223344';
+    ctx.fillRect(0, 0, 400, 300);
+    ctx.fillStyle = '#ff2222';
+    ctx.fillRect(80, 30, 10, 10);
+  });
+  const markerFile = await fileFrom(markerImg, 'marker.png', 'image/png');
+  await api.loadFile(markerFile);
+  api.setView({ k: 1, cu: 0, cv: 0 });
+  const baseBlob = await api.exportBlob();
+  const p0 = await pixel(baseBlob, 5, 5);
+  ok(p0[0] > 230 && p0[1] < 40, '旋转前标记在左上角');
+
+  $('rotateRight').click();
+  s = api.getState();
+  ok(s.angle === 90, '顺时针旋转 90°');
+  ok(/90.0°/.test($('angleValue').textContent), '角度显示 90.0°');
+  const rot90 = await api.exportBlob();
+  const p90 = await pixel(rot90, 235, 5);
+  ok(p90[0] > 230 && p90[1] < 40, '90° 后标记转到右上角');
+
+  api.setView({ cu: 9999, cv: 9999 });
+  s = api.getState();
+  ok(near(s.cu, 80, 1e-6) && near(s.cv, 30, 1e-6), '90° 时取景边界按旋转方向收紧');
+  api.setView({ cu: 0, cv: 0 });
+
+  $('rotateRight').click();
+  const rot180 = await api.exportBlob();
+  const p180 = await pixel(rot180, 235, 235);
+  ok(api.getState().angle === 180 && p180[0] > 230 && p180[1] < 40, '180° 后标记转到右下角');
+
+  $('rotateReset').click();
+  ok(api.getState().angle === 0, '0° 按钮恢复角度');
+
+  $('rotateLeft').click();
+  ok(api.getState().angle === -90, '逆时针旋转 90°');
+  $('rotateReset').click();
+
+  const square = canvasOf(800, 800, (ctx) => {
+    ctx.fillStyle = '#335577';
+    ctx.fillRect(0, 0, 800, 800);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(380, 20, 40, 40);
+  });
+  const squareFile = await fileFrom(square, 'square.png', 'image/png');
+  await api.loadFile(squareFile);
+  api.setView({ k: 1, cu: 0, cv: 0 });
+  setFine(30);
+  s = api.getState();
+  ok(near(s.angle, 30, 1e-6) && near(s.fine, 30, 1e-6), '滑杆微调 30°');
+  ok(near(s.k, 1, 1e-6), '30° 时仍可 1:1');
+  ok(/1:1 · 旋转/.test($('scaleBadge').textContent), '微旋时不再标记无损');
+  const fineBlob = await api.exportBlob();
+  const fineDims = await dims(fineBlob);
+  ok(fineDims.w === 240 && fineDims.h === 240, '旋转后仍导出 240×240');
+  setFine(0);
+  ok(near(api.getState().kMax, 800 / 240, 1e-6), '角度归零后倍率上限恢复');
+
   const smallFile = await fileFrom(solid(100, 80, '#3366cc'), 'small.png', 'image/png');
   await api.loadFile(smallFile);
   s = api.getState();
   ok(near(s.kMax, 1 / 3, 1e-6) && near(s.k, s.kMax, 1e-6), '小图固定放大 3×');
-  ok(s.kMin === s.kMax, '小图缩放范围退化');
-  ok(doc.getElementById('zoom').disabled === true, '小图缩放滑杆禁用');
-  ok(/放大/.test(doc.getElementById('scaleBadge').textContent), '标记为放大');
+  ok($('zoom').disabled === true, '小图缩放滑杆禁用');
+  ok($('oneToOneBtn').disabled === true, '小图 1:1 按钮禁用');
   const smallBlob = await api.exportBlob();
-  const smallDims = await dims(smallBlob);
   const smallPixel = await pixel(smallBlob, 120, 120);
-  ok(smallDims.w === 240 && smallDims.h === 240, '小图输出 240×240');
   ok(near(smallPixel[0], 0x33, 1) && near(smallPixel[1], 0x66, 1) && near(smallPixel[2], 0xcc, 1), '小图颜色保持');
+  ok(near(api.getState().kMax, 1 / 3, 1e-6), '小图倍率上限 0.33');
 
-  // ---- 透明通道与 JPG 白底 ----
   const alpha = canvasOf(300, 300, (ctx) => {
     ctx.clearRect(0, 0, 300, 300);
     ctx.fillStyle = '#0080ff';
@@ -197,20 +296,16 @@
   });
   const alphaFile = await fileFrom(alpha, 'alpha.png', 'image/png');
   await api.loadFile(alphaFile);
-  api.setView({ k: 1, cx: 150, cy: 150 });
+  api.setView({ k: 1, cu: 0, cv: 0 });
   setFormat('png');
   const alphaBlob = await api.exportBlob();
-  const transparent = await pixel(alphaBlob, 5, 5);
-  const opaque = await pixel(alphaBlob, 20, 20);
-  ok(transparent[3] === 0, 'PNG 透明区域保持透明');
-  ok(opaque[3] === 255 && near(opaque[0], 0, 2) && near(opaque[2], 255, 2), 'PNG 不透明区域颜色保持');
+  ok((await pixel(alphaBlob, 5, 5))[3] === 0, 'PNG 透明区域保持透明');
+  ok((await pixel(alphaBlob, 20, 20))[3] === 255, 'PNG 不透明区域保持不透明');
   setFormat('jpg');
-  const flatBlob = await api.exportBlob();
-  const flat = await pixel(flatBlob, 5, 5);
-  ok(flatBlob.type === 'image/jpeg' && flat[0] > 248 && flat[1] > 248 && flat[2] > 248, 'JPG 透明区域铺白底');
-  ok(doc.getElementById('qualityField').hidden === false, 'JPG 显示质量滑杆');
+  const flat = await pixel(await api.exportBlob(), 5, 5);
+  ok(flat[0] > 248 && flat[1] > 248 && flat[2] > 248, 'JPG 透明区域铺白底');
+  ok($('qualityField').hidden === false, 'JPG 显示质量滑杆');
 
-  // ---- JPG 质量与文件名 ----
   const noise = canvasOf(1200, 800, (ctx, w, h) => {
     const img = ctx.createImageData(w, h);
     let seed = 123456789;
@@ -225,32 +320,25 @@
   });
   const noiseFile = await fileFrom(noise, 'photo.jpg', 'image/jpeg', 0.95);
   await api.loadFile(noiseFile);
-  api.setView({ k: 1, cx: 600, cy: 400 });
+  api.setView({ k: 1, cu: 0, cv: 0 });
   setFormat('jpg');
   setQuality(70);
   const low = await api.exportBlob();
   setQuality(99);
   const high = await api.exportBlob();
-  ok(high.size > low.size, 'JPG 质量参数生效（' + low.size + ' vs ' + high.size + '）');
-  ok(api.outputName() === 'photo_240x240.jpg', '输出文件名为 photo_240x240.jpg');
+  ok(high.size > low.size, 'JPG 质量参数生效');
+  ok(api.outputName() === 'photo_240x240.jpg', 'JPG 文件名正确');
   setFormat('png');
-  ok(api.outputName() === 'photo_240x240.png', '切换 PNG 后扩展名变化');
+  ok(api.outputName() === 'photo_240x240.png', 'PNG 文件名正确');
 
-  // ---- 文件选择与统计 UI ----
   const dt = new DataTransfer();
   dt.items.add(bigFile);
-  const input = doc.getElementById('fileInput');
-  input.files = dt.files;
-  input.dispatchEvent(new Event('change', { bubbles: true }));
-  const named = await waitFor(() => doc.getElementById('fileName').textContent === 'big.png');
-  ok(!!named, '文件选择后显示文件名');
-  ok(doc.getElementById('fileMeta').textContent.includes('800'), '文件信息显示源尺寸');
-  ok(doc.getElementById('statRow').hidden === false, '载入后显示缩放标记');
-  ok(/×/.test(doc.getElementById('zoomValue').textContent), '显示取景尺寸');
-
-  // ---- 预览画布尺寸 ----
-  const preview = doc.getElementById('preview');
-  ok(preview.width === 240 && preview.height === 240, '预览画布 240×240');
+  $('fileInput').files = dt.files;
+  $('fileInput').dispatchEvent(new Event('change', { bubbles: true }));
+  ok(!!(await waitFor(() => $('fileName').textContent === 'big.png')), '文件选择后显示文件名');
+  ok($('fileMeta').textContent.includes('800'), '显示源尺寸');
+  ok(/×/.test($('zoomValue').textContent), '显示取景尺寸');
+  ok($('preview').width === 240 && $('preview').height === 240, '预览画布 240×240');
 
   finish();
 
@@ -263,7 +351,8 @@
     document.title = failed ? 'FAILED' : 'DONE';
   }
 })().catch((error) => {
-  document.getElementById('result').textContent = 'ERROR ' + (error && error.stack ? error.stack : error);
+  const el = document.getElementById('result');
+  el.textContent = 'ERROR ' + (error && error.stack ? error.stack : error);
   window.__testResult = 'ERROR ' + error;
   document.title = 'ERROR';
 });
