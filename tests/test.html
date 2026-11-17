@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>crop tests</title>
+<style>
+  body { margin: 0; font: 13px/1.5 Consolas, monospace; background: #111; color: #ddd; }
+  iframe { width: 1000px; height: 1300px; border: 0; background: #000; }
+  pre { padding: 16px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<iframe id="app" src="../index.html"></iframe>
+<pre id="result">RUNNING</pre>
+<script>
+(async () => {
+  const lines = [];
+  const ok = (cond, msg) => lines.push((cond ? 'PASS ' : 'FAIL ') + msg);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const iframe = document.getElementById('app');
+  if (iframe.contentDocument.readyState !== 'complete') {
+    await new Promise((res) => iframe.addEventListener('load', res, { once: true }));
+  }
+  await sleep(300);
+
+  const win = iframe.contentWindow;
+  const doc = iframe.contentDocument;
+  const api = win.__lockscreenCrop;
+  ok(!!api, '页面暴露处理 API');
+  if (!api) { finish(); return; }
+
+  ok(doc.getElementById('downloadBtn').disabled === true, '初始状态：下载按钮禁用');
+  ok(doc.getElementById('zoom').disabled === true, '初始状态：缩放滑杆禁用');
+  ok(doc.getElementById('statRow').hidden === true, '初始状态：信息区隐藏');
+
+  function canvasOf(w, h, paint) {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    paint(c.getContext('2d'), w, h);
+    return c;
+  }
+
+  function solid(w, h, color) {
+    return canvasOf(w, h, (ctx) => { ctx.fillStyle = color; ctx.fillRect(0, 0, w, h); });
+  }
+
+  function fileFrom(canvas, name, type, quality) {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(new File([blob], name, { type })), type, quality);
+    });
+  }
+
+  async function dims(blob) {
+    const bmp = await createImageBitmap(blob);
+    const d = { w: bmp.width, h: bmp.height };
+    bmp.close();
+    return d;
+  }
+
+  async function pixel(blob, x, y) {
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement('canvas');
+    c.width = bmp.width;
+    c.height = bmp.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(bmp, 0, 0);
+    const d = ctx.getImageData(x, y, 1, 1).data;
+    bmp.close();
+    return [d[0], d[1], d[2], d[3]];
+  }
+
+  function sourcePixel(canvas, x, y) {
+    const d = canvas.getContext('2d').getImageData(x, y, 1, 1).data;
+    return [d[0], d[1], d[2], d[3]];
+  }
+
+  async function waitFor(fn, timeout = 8000) {
+    const start = performance.now();
+    while (performance.now() - start < timeout) {
+      const value = fn();
+      if (value) return value;
+      await sleep(50);
+    }
+    return null;
+  }
+
+  const setFormat = (format) => doc.querySelector('[data-format="' + format + '"]').click();
+  const setQuality = (value) => {
+    const slider = doc.getElementById('quality');
+    slider.value = String(value);
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  const near = (a, b, tol) => Math.abs(a - b) <= tol;
+
+  // ---- 测试图 ----
+  const big = canvasOf(800, 600, (ctx) => {
+    const g = ctx.createLinearGradient(0, 0, 800, 600);
+    g.addColorStop(0, '#204080');
+    g.addColorStop(1, '#80c0ff');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 800, 600);
+    ctx.fillStyle = '#ff00ff';
+    ctx.fillRect(300, 200, 8, 8);
+  });
+  const bigFile = await fileFrom(big, 'big.png', 'image/png');
+
+  // ---- 载入与默认视图 ----
+  ok((await api.loadFile(bigFile)) === true, '载入 800×600 图片');
+  let s = api.getState();
+  ok(s.srcW === 800 && s.srcH === 600, '返回源尺寸');
+  ok(near(s.k, 2.5, 1e-6), '默认缩放为覆盖（k=2.5）');
+  ok(near(s.cx, 400, 1e-6) && near(s.cy, 300, 1e-6), '默认取景居中');
+  ok(s.kMin === 1 && near(s.kMax, 2.5, 1e-6), '缩放范围 1×–2.5×');
+  ok(doc.getElementById('downloadBtn').disabled === false, '载入后下载按钮可用');
+  ok(doc.getElementById('zoom').disabled === false, '载入后缩放滑杆可用');
+  ok(doc.getElementById('stageEmpty').hidden === true, '载入后空状态隐藏');
+
+  // ---- 默认（缩小）导出 ----
+  setFormat('png');
+  const fitBlob = await api.exportBlob();
+  const fitDims = await dims(fitBlob);
+  ok(fitBlob.type === 'image/png', '默认导出 PNG');
+  ok(fitDims.w === 240 && fitDims.h === 240, '默认导出 240×240');
+  const fitPixel = await pixel(fitBlob, 120, 120);
+  const fitSource = sourcePixel(big, 400, 300);
+  ok(near(fitPixel[0], fitSource[0], 6) && near(fitPixel[1], fitSource[1], 6) && near(fitPixel[2], fitSource[2], 6), '缩小取样颜色正确 ' + fitPixel + ' vs ' + fitSource);
+  ok(/缩小/.test(doc.getElementById('scaleBadge').textContent), '标记为缩小');
+
+  // ---- 1:1 像素精确 ----
+  api.setView({ k: 1, cx: 420, cy: 320 });
+  s = api.getState();
+  ok(s.k === 1, '切到 1:1');
+  ok(/1:1/.test(doc.getElementById('scaleBadge').textContent), '标记 1:1 无损');
+  const exactBlob = await api.exportBlob();
+  const marker = await pixel(exactBlob, 4, 4);
+  ok(marker[0] === 255 && marker[1] === 0 && marker[2] === 255 && marker[3] === 255, '1:1 裁剪像素未被改变');
+  const exactPixel = await pixel(exactBlob, 100, 100);
+  const exactSource = sourcePixel(big, 420 - 120 + 100, 320 - 120 + 100);
+  ok(exactPixel.every((v, i) => v === exactSource[i]), '1:1 渐变像素逐位一致');
+
+  // ---- 边界限制 ----
+  api.setView({ k: 1, cx: -9999, cy: 9999 });
+  s = api.getState();
+  ok(s.cx === 120 && s.cy === 480, '取景框限制在图片内');
+  api.setView({ k: 99 });
+  ok(near(api.getState().k, 2.5, 1e-6), '放大上限为覆盖倍数');
+  api.setView({ k: 0.001 });
+  ok(api.getState().k === 1, '缩小下限为 1:1');
+
+  // ---- 滑杆与按钮 ----
+  const zoom = doc.getElementById('zoom');
+  zoom.value = '500';
+  zoom.dispatchEvent(new Event('input', { bubbles: true }));
+  s = api.getState();
+  ok(s.k > 1 && s.k < 2.5, '滑杆可调整到中间倍率（' + s.k.toFixed(3) + '）');
+  doc.getElementById('oneToOneBtn').click();
+  ok(Math.abs(api.getState().k - 1) < 1e-6, '「1:1 裁剪」按钮生效');
+  doc.getElementById('resetBtn').click();
+  ok(near(api.getState().k, 2.5, 1e-6), '「复位」恢复适应视图');
+
+  // ---- 拖拽 ----
+  await sleep(200);
+  const before = api.getState();
+  const stage = doc.getElementById('stage');
+  const pointer = (type, x, y) => stage.dispatchEvent(new win.PointerEvent(type, {
+    bubbles: true, clientX: x, clientY: y, pointerId: 1, button: 0,
+  }));
+  pointer('pointerdown', 400, 300);
+  pointer('pointermove', 450, 300);
+  pointer('pointerup', 450, 300);
+  const after = api.getState();
+  ok(after.cx < before.cx, '拖动向右时取景左移（' + before.cx.toFixed(1) + ' → ' + after.cx.toFixed(1) + '）');
+  ok(after.cy === before.cy, '水平拖动不影响纵向');
+
+  // ---- 小图放大 ----
+  const smallFile = await fileFrom(solid(100, 80, '#3366cc'), 'small.png', 'image/png');
+  await api.loadFile(smallFile);
+  s = api.getState();
+  ok(near(s.kMax, 1 / 3, 1e-6) && near(s.k, s.kMax, 1e-6), '小图固定放大 3×');
+  ok(s.kMin === s.kMax, '小图缩放范围退化');
+  ok(doc.getElementById('zoom').disabled === true, '小图缩放滑杆禁用');
+  ok(/放大/.test(doc.getElementById('scaleBadge').textContent), '标记为放大');
+  const smallBlob = await api.exportBlob();
+  const smallDims = await dims(smallBlob);
+  const smallPixel = await pixel(smallBlob, 120, 120);
+  ok(smallDims.w === 240 && smallDims.h === 240, '小图输出 240×240');
+  ok(near(smallPixel[0], 0x33, 1) && near(smallPixel[1], 0x66, 1) && near(smallPixel[2], 0xcc, 1), '小图颜色保持');
+
+  // ---- 透明通道与 JPG 白底 ----
+  const alpha = canvasOf(300, 300, (ctx) => {
+    ctx.clearRect(0, 0, 300, 300);
+    ctx.fillStyle = '#0080ff';
+    ctx.fillRect(0, 0, 300, 300);
+    ctx.clearRect(0, 0, 40, 40);
+  });
+  const alphaFile = await fileFrom(alpha, 'alpha.png', 'image/png');
+  await api.loadFile(alphaFile);
+  api.setView({ k: 1, cx: 150, cy: 150 });
+  setFormat('png');
+  const alphaBlob = await api.exportBlob();
+  const transparent = await pixel(alphaBlob, 5, 5);
+  const opaque = await pixel(alphaBlob, 20, 20);
+  ok(transparent[3] === 0, 'PNG 透明区域保持透明');
+  ok(opaque[3] === 255 && near(opaque[0], 0, 2) && near(opaque[2], 255, 2), 'PNG 不透明区域颜色保持');
+  setFormat('jpg');
+  const flatBlob = await api.exportBlob();
+  const flat = await pixel(flatBlob, 5, 5);
+  ok(flatBlob.type === 'image/jpeg' && flat[0] > 248 && flat[1] > 248 && flat[2] > 248, 'JPG 透明区域铺白底');
+  ok(doc.getElementById('qualityField').hidden === false, 'JPG 显示质量滑杆');
+
+  // ---- JPG 质量与文件名 ----
+  const noise = canvasOf(1200, 800, (ctx, w, h) => {
+    const img = ctx.createImageData(w, h);
+    let seed = 123456789;
+    for (let i = 0; i < img.data.length; i += 4) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      img.data[i] = seed & 255;
+      img.data[i + 1] = (seed >> 8) & 255;
+      img.data[i + 2] = (seed >> 16) & 255;
+      img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  });
+  const noiseFile = await fileFrom(noise, 'photo.jpg', 'image/jpeg', 0.95);
+  await api.loadFile(noiseFile);
+  api.setView({ k: 1, cx: 600, cy: 400 });
+  setFormat('jpg');
+  setQuality(70);
+  const low = await api.exportBlob();
+  setQuality(99);
+  const high = await api.exportBlob();
+  ok(high.size > low.size, 'JPG 质量参数生效（' + low.size + ' vs ' + high.size + '）');
+  ok(api.outputName() === 'photo_240x240.jpg', '输出文件名为 photo_240x240.jpg');
+  setFormat('png');
+  ok(api.outputName() === 'photo_240x240.png', '切换 PNG 后扩展名变化');
+
+  // ---- 文件选择与统计 UI ----
+  const dt = new DataTransfer();
+  dt.items.add(bigFile);
+  const input = doc.getElementById('fileInput');
+  input.files = dt.files;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  const named = await waitFor(() => doc.getElementById('fileName').textContent === 'big.png');
+  ok(!!named, '文件选择后显示文件名');
+  ok(doc.getElementById('fileMeta').textContent.includes('800'), '文件信息显示源尺寸');
+  ok(doc.getElementById('statRow').hidden === false, '载入后显示缩放标记');
+  ok(/×/.test(doc.getElementById('zoomValue').textContent), '显示取景尺寸');
+
+  // ---- 预览画布尺寸 ----
+  const preview = doc.getElementById('preview');
+  ok(preview.width === 240 && preview.height === 240, '预览画布 240×240');
+
+  finish();
+
+  function finish() {
+    const failed = lines.filter((l) => l.startsWith('FAIL')).length;
+    const passed = lines.length - failed;
+    lines.push('SUMMARY ' + passed + ' passed, ' + failed + ' failed');
+    document.getElementById('result').textContent = lines.join('\n');
+    window.__testResult = lines.join('\n');
+    document.title = failed ? 'FAILED' : 'DONE';
+  }
+})().catch((error) => {
+  document.getElementById('result').textContent = 'ERROR ' + (error && error.stack ? error.stack : error);
+  window.__testResult = 'ERROR ' + error;
+  document.title = 'ERROR';
+});
+</script>
+</body>
+</html>
