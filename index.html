@@ -400,11 +400,10 @@
           </div>
           <input id="zoom" type="range" min="0" max="1000" step="1" value="0" disabled aria-label="缩放取景范围" />
           <div class="ratio-row">
-            <input id="ratioInput" type="number" min="0.1" step="1" list="ratioList" value="" disabled aria-label="取样倍率，源像素除以输出像素" />
+            <input id="ratioInput" type="number" min="0.1" step="0.01" value="" disabled aria-label="取样倍率，源像素除以输出像素" />
             <span class="unit">×</span>
           </div>
-          <div class="hint-line">取样倍率 = 源像素 ÷ 输出像素；整数倍率（如 4.00×）缩放质量更好。</div>
-          <datalist id="ratioList"></datalist>
+          <div class="hint-line">倍率 = 取景宽度 ÷ 240，由原图尺寸和取景范围决定；缩放使用高质量重采样，不要求整数倍率。</div>
         </div>
 
         <div class="field">
@@ -500,7 +499,6 @@
   const zoom = $('#zoom');
   const zoomValue = $('#zoomValue');
   const ratioInput = $('#ratioInput');
-  const ratioList = $('#ratioList');
   const angleSlider = $('#angle');
   const angleValue = $('#angleValue');
   const rotateLeft = $('#rotateLeft');
@@ -822,32 +820,6 @@
     return state.kMax * Math.pow(state.kMin / state.kMax, t);
   }
 
-  let ratioSignature = '';
-
-  function refreshRatioList() {
-    if (!state.image) return;
-    const signature = state.kMax.toFixed(6);
-    if (signature === ratioSignature) return;
-    ratioSignature = signature;
-
-    ratioList.innerHTML = '';
-    const maxInt = Math.floor(state.kMax + 1e-9);
-
-    if (Math.abs(state.kMax - maxInt) > 1e-9) {
-      const fit = document.createElement('option');
-      fit.value = state.kMax.toFixed(3);
-      fit.label = '适应整图 · ' + state.kMax.toFixed(2) + '×';
-      ratioList.appendChild(fit);
-    }
-
-    for (let i = maxInt; i >= 1; i -= 1) {
-      const opt = document.createElement('option');
-      opt.value = String(i);
-      opt.label = i.toFixed(2) + '× · 取景 ' + Math.round(TARGET.width * i) + ' px';
-      ratioList.appendChild(opt);
-    }
-  }
-
   function updateUI() {
     if (!state.image) {
       zoomValue.textContent = '—';
@@ -885,8 +857,6 @@
       scaleBadge.textContent = '放大 ' + (1 / ratio).toFixed(2) + '×';
       scaleBadge.className = 'badge scaled';
     }
-
-    refreshRatioList();
   }
 
   function setZoom(next) {
@@ -959,7 +929,6 @@
     resetBtn.disabled = false;
     downloadBtn.disabled = false;
     exportHint.textContent = '';
-    ratioSignature = '';
 
     updateUI();
     scheduleRender();

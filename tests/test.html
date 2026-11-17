@@ -128,9 +128,6 @@
   ok($('ratioInput').disabled === false, '载入后倍率输入可用');
   ok($('angle').disabled === false && $('rotateRight').disabled === false, '载入后旋转可用');
 
-  const ratioOptions = [...doc.querySelectorAll('#ratioList option')].map((o) => o.value);
-  ok(ratioOptions.includes('2') && ratioOptions.includes('1'), '倍率候选包含整数 1×、2×');
-
   setFormat('png');
   const fitBlob = await api.exportBlob();
   const fitDims = await dims(fitBlob);
@@ -165,6 +162,9 @@
   ok(near(api.getState().k, 1.75, 1e-6), '输入 1.75 → 精确倍率');
   ok($('ratioInput').value === '1.75', '倍率输入显示 1.75');
   ok(/缩小 1.75×/.test($('scaleBadge').textContent), '标记 1.75×');
+  setRatio(1.37);
+  ok(near(api.getState().k, 1.37, 1e-6), '接受任意小数倍率（不吸附整数）');
+  ok($('ratioInput').value === '1.37', '倍率输入保留 1.37');
   setRatio(99);
   ok(near(api.getState().k, 2.5, 1e-6), '超范围倍率被限制');
   setRatio(0);
@@ -287,6 +287,14 @@
   const smallPixel = await pixel(smallBlob, 120, 120);
   ok(near(smallPixel[0], 0x33, 1) && near(smallPixel[1], 0x66, 1) && near(smallPixel[2], 0xcc, 1), '小图颜色保持');
   ok(near(api.getState().kMax, 1 / 3, 1e-6), '小图倍率上限 0.33');
+
+  const kilo = solid(1000, 1000, '#556677');
+  const kiloFile = await fileFrom(kilo, 'kilo.png', 'image/png');
+  await api.loadFile(kiloFile);
+  s = api.getState();
+  ok(near(s.k, 1000 / 240, 1e-6), '适应倍率由原图尺寸决定（1000÷240）');
+  ok($('ratioInput').value === (1000 / 240).toFixed(2), '倍率输入显示 4.17');
+  ok($('ratioInput').step === '0.01', '倍率输入允许小数');
 
   const alpha = canvasOf(300, 300, (ctx) => {
     ctx.clearRect(0, 0, 300, 300);
